@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resilience Tracker — Radar de Preparación y Seguridad</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --border: #1f2937;
+      --cyan: #06b6d4;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    header { background: #0b1120; border-bottom: 1px solid var(--border); padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-logo { font-size: 28px; background: rgba(6, 182, 212, 0.15); border: 1px solid var(--cyan); border-radius: 10px; padding: 6px 12px; }
+    .brand-text h1 { font-size: 20px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .brand-text p { font-size: 13px; color: var(--text-muted); }
+    .header-actions { display: flex; align-items: center; gap: 14px; }
+    .score-badge { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--emerald); border-radius: 8px; padding: 6px 14px; display: flex; align-items: center; gap: 8px; font-weight: 700; color: #34d399; font-size: 14px; }
+    .btn-download-apk { background: linear-gradient(135deg, #0284c7, #06b6d4); color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(6, 182, 212, 0.4); transition: transform 0.2s; }
+    .btn-download-apk:hover { transform: translateY(-1px); }
+
+    nav.tabs { background: #0d1525; border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 8px; overflow-x: auto; }
+    .tab-btn { background: none; border: none; border-bottom: 3px solid transparent; color: var(--text-muted); padding: 14px 18px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; white-space: nowrap; }
+    .tab-btn:hover { color: #fff; }
+    .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+    main { flex: 1; padding: 28px; max-width: 1300px; margin: 0 auto; width: 100%; }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Radar Grid Layout */
+    .radar-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px; align-items: start; }
+    @media (max-width: 900px) { .radar-layout { grid-template-columns: 1fr; } }
+
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    .card-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #fff; display: flex; align-items: center; justify-content: space-between; }
+    
+    /* Radar Canvas & SVG */
+    .radar-wrapper { display: flex; justify-content: center; align-items: center; padding: 10px; }
+    svg.radar-svg { max-width: 100%; height: auto; }
+
+    /* Area List */
+    .area-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .area-card { background: #0c1322; border: 1px solid var(--border); border-radius: 10px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+    .area-card:hover { border-color: var(--cyan); transform: translateY(-2px); }
+    .area-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .area-title { font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .area-score { font-size: 13px; font-weight: 700; color: var(--cyan); }
+    .progress-bar-bg { background: #1f2937; height: 6px; border-radius: 9999px; overflow: hidden; }
+    .progress-bar-fill { background: linear-gradient(90deg, var(--cyan), var(--emerald)); height: 100%; transition: width 0.3s; }
+
+    /* Checklist */
+    .task-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid #1f2937; transition: background 0.15s; }
+    .task-item:hover { background: rgba(255,255,255,0.02); }
+    .task-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--cyan); margin-top: 3px; cursor: pointer; }
+    .task-content { flex: 1; }
+    .task-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 3px; }
+    .task-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+    .task-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; background: rgba(6, 182, 212, 0.15); color: var(--cyan); }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 12px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 12px; text-transform: uppercase; }
+    td { padding: 12px; border-bottom: 1px solid var(--border); color: #e5e7eb; }
+    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .status-ok { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .status-warn { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">🛡️</div>
+      <div class="brand-text">
+        <h1>Resilience Tracker <span style="font-size: 11px; background: rgba(6,182,212,0.2); border: 1px solid var(--cyan); padding: 2px 8px; border-radius: 999px; color: var(--cyan);">v1.0 Nativo Android & Web</span></h1>
+        <p>Radar de Madurez en Resiliencia, Continuidad de Negocio y Seguridad</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="score-badge">
+        <span>Índice Global:</span>
+        <span id="globalScoreText">74%</span>
+      </div>
+      <a href="ResilienceTracker.apk" download class="btn-download-apk">
+        <span>📱</span> Descargar APK Android (12 MB)
+      </a>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" onclick="showTab('radar')">📊 Radar de Resiliencia</button>
+    <button class="tab-btn" onclick="showTab('actions')">✅ Protocolos & Tareas</button>
+    <button class="tab-btn" onclick="showTab('inventory')">📦 Inventario de Insumos</button>
+    <button class="tab-btn" onclick="showTab('drills')">🚨 Simulacros</button>
+    <button class="tab-btn" onclick="showTab('app')">📱 Sobre la App Android</button>
+  </nav>
+
+  <main>
+    <!-- VISTA RADAR -->
+    <section id="view-radar" class="view active">
+      <div class="radar-layout">
+        <div class="card">
+          <div class="card-title">
+            <span>Diagnóstico Multieje de Resiliencia (12 Áreas)</span>
+            <span style="font-size: 12px; color: var(--cyan); cursor: pointer;" onclick="randomizeScores()">↻ Recalcular</span>
+          </div>
+          <div class="radar-wrapper">
+            <svg id="radarSvg" class="radar-svg" width="420" height="420" viewBox="0 0 420 420"></svg>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-title">Nivel de Preparación por Dimensión</div>
+            <div id="areasList" class="area-grid"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VISTA ACCIONES -->
+    <section id="view-actions" class="view">
+      <div class="card">
+        <div class="card-title">
+          <span>Plan de Acción y Mitigación de Riesgos</span>
+          <span style="font-size: 12px; color: var(--emerald);" id="completedCount">0 completadas</span>
+        </div>
+        <div id="taskList"></div>
+      </div>
+    </section>
+
+    <!-- VISTA INVENTARIO -->
+    <section id="view-inventory" class="view">
+      <div class="card">
+        <div class="card-title">Inventario Táctico de Suministros y Control de Caducidades</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Área</th>
+              <th>Artículo / Insumo</th>
+              <th>Cantidad</th>
+              <th>Caducidad / Revisión</th>
+              <th>Días Restantes</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VISTA SIMULACROS -->
+    <section id="view-drills" class="view">
+      <div class="card">
+        <div class="card-title">Programa de Simulacros y Pruebas Operativas de Estrés</div>
+        <div id="drillsList"></div>
+      </div>
+    </section>
+
+    <!-- VISTA APP -->
+    <section id="view-app" class="view">
+      <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <div class="card-title">Instalación y Características de la App Móvil Android</div>
+        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;">
+          <strong>Resilience Tracker</strong> está desarrollada en Kotlin nativo con Jetpack Compose y Material 3. Permite operar 100% offline en situaciones de emergencia, apagones o cortes de conectividad.
+        </p>
+        <div style="background: #0b1120; padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 24px;">
+          <h4 style="color: var(--cyan); margin-bottom: 8px;">Pasos de Instalación:</h4>
+          <ol style="padding-left: 20px; font-size: 14px; color: #cbd5e1; line-height: 1.8;">
+            <li>Haz clic en el botón <strong>Descargar APK Android</strong> en la esquina superior derecha o descárgalo aquí: <a href="ResilienceTracker.apk" download style="color: var(--cyan);">ResilienceTracker.apk</a>.</li>
+            <li>En tu dispositivo Android, abre el archivo descargado. Si el sistema te lo solicita, autoriza "Instalar aplicaciones de fuentes desconocidas" para tu navegador o explorador de archivos.</li>
+            <li>Abre la aplicación para acceder a las 12 dimensiones de resiliencia, inventarios con alarmas de caducidad y guías de respuesta inmediata.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const categories = [
+      { id: "alimentaria", title: "Alimentaria", icon: "🌾", score: 85 },
+      { id: "agua", title: "Hídrica", icon: "💧", score: 90 },
+      { id: "energia", title: "Energética", icon: "⚡", score: 70 },
+      { id: "ciberseguridad", title: "Ciberseguridad", icon: "🛡️", score: 80 },
+      { id: "datos", title: "Datos (3-2-1)", icon: "💾", score: 75 },
+      { id: "economica", title: "Económica", icon: "💰", score: 65 },
+      { id: "familiar", title: "Familiar", icon: "🏠", score: 80 },
+      { id: "salud", title: "Salud / IFAK", icon: "🩺", score: 70 },
+      { id: "comunicaciones", title: "Comunicaciones", icon: "📻", score: 60 },
+      { id: "refugio", title: "Refugio / Bug-Out", icon: "🎒", score: 75 },
+      { id: "comunidad", title: "Red de Apoyo", icon: "👥", score: 65 },
+      { id: "nrbq", title: "Defensa NRBQ", icon: "☣️", score: 70 }
+    ];
+
+    const tasks = [
+      { id: "t1", area: "Alimentaria", title: "Reserva de alimentos no perecederos para 90 días", desc: "Granos sellados en bolsas Mylar con absorbedores de oxígeno.", done: true, pts: 25 },
+      { id: "t2", area: "Hídrica", title: "Almacenamiento de agua potable (3L/persona/día)", desc: "Tanques certificados grado alimenticio + pastillas potabilizadoras Aquatabs.", done: true, pts: 30 },
+      { id: "t3", area: "Energética", title: "Estación de energía portátil e inversor solar", desc: "Batería LiFePO4 de 1000Wh con paneles solares plegables de 200W.", done: false, pts: 35 },
+      { id: "t4", area: "Ciberseguridad", title: "Implementación de llaves físicas 2FA (FIDO2)", desc: "Configuración de llaves de seguridad de hardware en cuentas clave.", done: true, pts: 20 },
+      { id: "t5", area: "Datos", title: "Respaldo Inmutable 3-2-1 con disco fuera de sitio", desc: "Copia local en NAS, copia encriptada en la nube y disco frío externo.", done: true, pts: 25 },
+      { id: "t6", area: "Salud", title: "Botiquín de trauma IFAK con torniquetes CAT Gen 7", desc: "Vendajes hemostáticos, agentes coagulantes y férulas SAM.", done: false, pts: 30 }
+    ];
+
+    const inventory = [
+      { area: "Hídrica", item: "Garrafones Ciel Grado Alimenticio", qty: "120 Litros", date: "2026-12-31", days: 416, status: "OK" },
+      { area: "Alimentaria", item: "Cubetas Mylar Arroz y Frijol", qty: "45 Kg", date: "2031-05-15", days: 2012, status: "OK" },
+      { area: "Energética", item: "Baterías Recargables Eneloop Pro AA/AAA", qty: "24 piezas", date: "2027-08-10", days: 638, status: "OK" },
+      { area: "Salud", item: "Torniquete Táctico CAT Gen 7 Original", qty: "2 unidades", date: "2028-01-01", days: 782, status: "OK" },
+      { area: "Comunicaciones", item: "Radio Baofeng UV-5R Dual Band", qty: "3 equipos", date: "2027-01-15", days: 431, status: "OK" }
+    ];
+
+    const drills = [
+      { title: "Simulacro de Apagón Total (Blackout 12h)", date: "Cada 6 meses", desc: "Desconexión de red eléctrica general para validar respaldo de baterías e iluminación de emergencia." },
+      { title: "Prueba de Evacuación Rápida con Mochila Bug-Out", date: "Trimestral", desc: "Medición de tiempo de desalojo y verificación de peso y equipo de la mochila de 72 horas." },
+      { title: "Recuperación de Respaldo Frío (Disaster Recovery)", date: "Semestral", desc: "Restauración completa de archivos esenciales desde almacenamiento desconectado." }
+    ];
+
+    function renderRadar() {
+      const svg = document.getElementById('radarSvg');
+      const cx = 210, cy = 210, r = 160;
+      const count = categories.length;
+      let html = '';
+
+      // Grid circles
+      for (let level = 0.25; level <= 1.0; level += 0.25) {
+        html += `<circle cx="${cx}" cy="${cy}" r="${r * level}" fill="none" stroke="#1f2937" stroke-dasharray="3,3" />`;
+      }
+
+      // Axis lines & Labels
+      categories.forEach((cat, i) => {
+        const angle = (Math.PI * 2 / count) * i - Math.PI / 2;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        html += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#1f2937" />`;
+
+        const lx = cx + (r + 26) * Math.cos(angle);
+        const ly = cy + (r + 26) * Math.sin(angle);
+        html += `<text x="${lx}" y="${ly}" fill="#94a3b8" font-size="10" font-weight="700" text-anchor="middle" dominant-baseline="central">${cat.icon} ${cat.title}</text>`;
+      });
+
+      // Data polygon
+      let points = '';
+      categories.forEach((cat, i) => {
+        const angle = (Math.PI * 2 / count) * i - Math.PI / 2;
+        const dist = r * (cat.score / 100);
+        const x = cx + dist * Math.cos(angle);
+        const y = cy + dist * Math.sin(angle);
+        points += `${x},${y} `;
+      });
+
+      html += `<polygon points="${points}" fill="rgba(6, 182, 212, 0.25)" stroke="#06b6d4" stroke-width="2.5" />`;
+
+      // Data dots
+      categories.forEach((cat, i) => {
+        const angle = (Math.PI * 2 / count) * i - Math.PI / 2;
+        const dist = r * (cat.score / 100);
+        const x = cx + dist * Math.cos(angle);
+        const y = cy + dist * Math.sin(angle);
+        html += `<circle cx="${x}" cy="${y}" r="4" fill="#38bdf8" stroke="#fff" stroke-width="1.5" />`;
+      });
+
+      svg.innerHTML = html;
+    }
+
+    function renderAreas() {
+      const list = document.getElementById('areasList');
+      list.innerHTML = categories.map(cat => `
+        <div class="area-card" onclick="alert('Área: ' + '${cat.title}' + ' - Puntuación: ' + '${cat.score}%')">
+          <div class="area-header">
+            <span class="area-title">${cat.icon} ${cat.title}</span>
+            <span class="area-score">${cat.score}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: ${cat.score}%"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('taskList');
+      container.innerHTML = tasks.map(t => `
+        <div class="task-item">
+          <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask('${t.id}')">
+          <div class="task-content">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="task-title" style="${t.done ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.title}</span>
+              <span class="task-badge">${t.area}</span>
+              <span style="font-size: 11px; color: var(--emerald); font-weight: 700;">+${t.pts} pts</span>
+            </div>
+            <p class="task-desc">${t.desc}</p>
+          </div>
+        </div>
+      `).join('');
+      updateTaskCount();
+    }
+
+    function toggleTask(id) {
+      const t = tasks.find(x => x.id === id);
+      if (t) {
+        t.done = !t.done;
+        renderTasks();
+      }
+    }
+
+    function updateTaskCount() {
+      const done = tasks.filter(t => t.done).length;
+      document.getElementById('completedCount').innerText = `${done} de ${tasks.length} completadas`;
+    }
+
+    function renderInventory() {
+      const tb = document.getElementById('inventoryTable');
+      tb.innerHTML = inventory.map(item => `
+        <tr>
+          <td><span class="task-badge">${item.area}</span></td>
+          <td style="font-weight: 600;">${item.item}</td>
+          <td>${item.qty}</td>
+          <td>${item.date}</td>
+          <td style="color: var(--cyan); font-weight: 700;">${item.days} días</td>
+          <td><span class="status-badge status-ok">${item.status}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderDrills() {
+      const container = document.getElementById('drillsList');
+      container.innerHTML = drills.map(d => `
+        <div class="card" style="background:#0c1322; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h4 style="color:#fff;">${d.title}</h4>
+            <span class="task-badge" style="background:rgba(16,185,129,0.15); color:#34d399;">Frecuencia: ${d.date}</span>
+          </div>
+          <p style="font-size:13px; color:var(--text-muted);">${d.desc}</p>
+        </div>
+      `).join('');
+    }
+
+    function showTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-' + tabId).classList.add('active');
+    }
+
+    function randomizeScores() {
+      categories.forEach(c => c.score = Math.floor(Math.random() * 30) + 70);
+      const avg = Math.round(categories.reduce((a, b) => a + b.score, 0) / categories.length);
+      document.getElementById('globalScoreText').innerText = avg + '%';
+      renderRadar();
+      renderAreas();
+    }
+
+    renderRadar();
+    renderAreas();
+    renderTasks();
+    renderInventory();
+    renderDrills();
+  </script>
+</body>
+</html>

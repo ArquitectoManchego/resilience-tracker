@@ -1,0 +1,14 @@
+{
+  "name": "resilience-tracker",
+  "version": "1.0.0",
+  "description": "Resilience Tracker: Radar de Preparación, Auditoría de Resiliencia y Seguridad Integral",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3043",
+    "build": "vite build",
+    "preview": "vite preview --port 3043"
+  },
+  "devDependencies": {
+    "vite": "^5.4.21"
+  }
+}
